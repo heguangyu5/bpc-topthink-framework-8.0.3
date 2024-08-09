@@ -23,8 +23,13 @@ use think\Session;
  */
 class SessionInit
 {
-    public function __construct(protected App $app, protected Session $session)
+    protected $app;
+    protected $session;
+
+    public function __construct(/*protected*/ App $app, /*protected*/ Session $session)
     {
+        $this->app     = $app;
+        $this->session = $session;
     }
 
     /**

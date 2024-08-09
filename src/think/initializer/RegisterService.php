@@ -31,13 +31,13 @@ class RegisterService
 
     public function init(App $app)
     {
-        $file = $app->getRootPath() . 'vendor/services.php';
+        //$file = $app->getRootPath() . 'vendor/services.php';
 
         $services = $this->services;
 
-        if (is_file($file)) {
-            $services = array_merge($services, include $file);
-        }
+        //if (is_file($file)) {
+        //    $services = array_merge($services, include $file);
+        //}
 
         foreach ($services as $service) {
             if (class_exists($service)) {

@@ -53,7 +53,8 @@ class Error
         $handler->report($e);
 
         if ($this->app->runningInConsole()) {
-            $handler->renderForConsole(new ConsoleOutput, $e);
+            throw new \Exception('TODO');
+            //$handler->renderForConsole(new ConsoleOutput, $e);
         } else {
             $response = $handler->render($this->app->request, $e);
             $response->send();

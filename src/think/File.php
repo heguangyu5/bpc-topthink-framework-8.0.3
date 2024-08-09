@@ -184,11 +184,18 @@ class File extends SplFileInfo
             if ($rule instanceof Closure) {
                 $this->hashName = call_user_func_array($rule, [$this]);
             } else {
-                $this->hashName = match (true) {
+                if (in_array($rule, hash_algos()) && $hash = $this->hash($rule)) {
+                    $this->hashName = substr($hash, 0, 2) . DIRECTORY_SEPARATOR . substr($hash, 2);
+                } elseif (is_callable($rule)) {
+                    $this->hashName = call_user_func($rule);
+                } else {
+                    $this->hashName = date('Ymd') . DIRECTORY_SEPARATOR . md5(microtime(true) . $this->getPathname());
+                }
+                /*$this->hashName = match (true) {
                     in_array($rule, hash_algos()) && $hash = $this->hash($rule)   =>  substr($hash, 0, 2) . DIRECTORY_SEPARATOR . substr($hash, 2),
                     is_callable($rule)  =>  call_user_func($rule),
                     default     =>  date('Ymd') . DIRECTORY_SEPARATOR . md5(microtime(true) . $this->getPathname()),
-                };
+                };*/
             }
         }
 

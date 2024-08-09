@@ -19,8 +19,11 @@ use think\Response;
  */
 class HttpResponseException extends \RuntimeException
 {
-    public function __construct(protected Response $response)
+    protected $response;
+
+    public function __construct(/*protected*/ Response $response)
     {
+        $this->response = $response;
     }
 
     public function getResponse()

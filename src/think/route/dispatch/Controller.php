@@ -86,25 +86,40 @@ class Controller extends Dispatch
                 $suffix = $this->rule->config('action_suffix');
                 $action = $this->actionName . $suffix;
 
-                if (is_callable([$instance, $action])) {
-                    $vars = $this->request->param();
-                    try {
-                        $reflect = new ReflectionMethod($instance, $action);
-                        // 严格获取当前操作方法名
-                        $actionName = $reflect->getName();
+                if (defined('__BPC__')) {
+                    $reflect = bpc_is_callable_num_args(array($instance, $action));
+                    if ($reflect) {
+                        $reflect['method'] = $action;
+                        $vars = $this->request->param();
                         if ($suffix) {
-                            $actionName = substr($actionName, 0, -strlen($suffix));
+                            $action = substr($action, 0, -strlen($suffix));
                         }
-
-                        $this->request->setAction($actionName);
-                    } catch (ReflectionException $e) {
-                        $reflect = new ReflectionMethod($instance, '__call');
-                        $vars    = [$action, $vars];
                         $this->request->setAction($action);
+                    } else {
+                        // 操作不存在
+                        throw new HttpException(404, 'method not exists:' . get_class($instance) . '->' . $action . '()');
                     }
                 } else {
-                    // 操作不存在
-                    throw new HttpException(404, 'method not exists:' . $instance::class . '->' . $action . '()');
+                    if (is_callable([$instance, $action])) {
+                        $vars = $this->request->param();
+                        try {
+                            $reflect = new ReflectionMethod($instance, $action);
+                            // 严格获取当前操作方法名
+                            $actionName = $reflect->getName();
+                            if ($suffix) {
+                                $actionName = substr($actionName, 0, -strlen($suffix));
+                            }
+
+                            $this->request->setAction($actionName);
+                        } catch (ReflectionException $e) {
+                            $reflect = new ReflectionMethod($instance, '__call');
+                            $vars    = [$action, $vars];
+                            $this->request->setAction($action);
+                        }
+                    } else {
+                        // 操作不存在
+                        throw new HttpException(404, 'method not exists:' . get_class($instance) . '->' . $action . '()');
+                    }
                 }
 
                 $data = $this->app->invokeReflectMethod($instance, $reflect, $vars);
@@ -128,13 +143,15 @@ class Controller extends Dispatch
      */
     protected function registerControllerMiddleware($controller): void
     {
-        $class = new ReflectionClass($controller);
+        //$class = new ReflectionClass($controller);
 
-        if ($class->hasProperty('middleware')) {
-            $reflectionProperty = $class->getProperty('middleware');
-            $reflectionProperty->setAccessible(true);
+        //if ($class->hasProperty('middleware')) {
+        //    $reflectionProperty = $class->getProperty('middleware');
+        //    $reflectionProperty->setAccessible(true);
 
-            $middlewares = $reflectionProperty->getValue($controller);
+        //    $middlewares = $reflectionProperty->getValue($controller);
+        if (isset($controller->middleware)) {
+            $middlewares = $controller->middleware;
             $action      = $this->request->action(true);
 
             foreach ($middlewares as $key => $val) {

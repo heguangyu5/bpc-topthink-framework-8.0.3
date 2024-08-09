@@ -59,7 +59,11 @@ class Php implements TemplateHandlerInterface
             $template = $this->parseTemplate($template);
         }
 
-        return is_file($template);
+        if (defined('__BPC__')) {
+            return include_file_exists($template);
+        } else {
+            return is_file($template);
+        }
     }
 
     /**
@@ -77,7 +81,12 @@ class Php implements TemplateHandlerInterface
         }
 
         // 模板不存在 抛出异常
-        if (!is_file($template)) {
+        if (defined('__BPC__')) {
+            $templateExists = include_file_exists($template);
+        } else {
+            $templateExists = is_file($template);
+        }
+        if (!$templateExists) {
             throw new RuntimeException('template not exists:' . $template);
         }
 
@@ -97,10 +106,12 @@ class Php implements TemplateHandlerInterface
      */
     public function display(string $content, array $data = []): void
     {
-        $this->content = $content;
+        /*$this->content = $content;
 
         extract($data, EXTR_OVERWRITE);
-        eval('?>' . $this->content);
+        eval('?>' . $this->content);*/
+
+        throw new \Exception('bpc not support eval()');
     }
 
     /**
@@ -125,11 +136,11 @@ class Php implements TemplateHandlerInterface
             $appName = isset($app) ? $app : $this->app->http->getName();
             $view    = $this->config['view_dir_name'];
 
-            if (is_dir($this->app->getAppPath() . $view)) {
-                $path = isset($app) ? $this->app->getBasePath() . ($appName ? $appName . DIRECTORY_SEPARATOR : '') . $view . DIRECTORY_SEPARATOR : $this->app->getAppPath() . $view . DIRECTORY_SEPARATOR;
-            } else {
+            //if (is_dir($this->app->getAppPath() . $view)) {
+            //    $path = isset($app) ? $this->app->getBasePath() . ($appName ? $appName . DIRECTORY_SEPARATOR : '') . $view . DIRECTORY_SEPARATOR : $this->app->getAppPath() . $view . DIRECTORY_SEPARATOR;
+            //} else {
                 $path = $this->app->getRootPath() . $view . DIRECTORY_SEPARATOR . ($appName ? $appName . DIRECTORY_SEPARATOR : '');
-            }
+            //}
         }
 
         $depr = $this->config['view_depr'];

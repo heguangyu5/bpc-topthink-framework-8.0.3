@@ -20,14 +20,19 @@ use DateTimeInterface;
  */
 class TagSet
 {
+    protected $tag;
+    protected $handler;
+
     /**
      * 架构函数
      * @access public
      * @param array  $tag     缓存标签
      * @param Driver $handler 缓存对象
      */
-    public function __construct(protected array $tag, protected Driver $handler)
+    public function __construct(/*protected*/ array $tag, /*protected*/ Driver $handler)
     {
+        $this->tag     = $tag;
+        $this->handler = $handler;
     }
 
     /**

@@ -17,7 +17,12 @@ namespace think\event;
  */
 class LogWrite
 {
-    public function __construct(public string $channel, public array $log)
+    public $channel;
+    public $log;
+
+    public function __construct(/*public*/ string $channel, /*public*/ array $log)
     {
+        $this->channel = $channel;
+        $this->log     = $log;
     }
 }

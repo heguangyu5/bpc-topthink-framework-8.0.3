@@ -36,8 +36,11 @@ class Handle
 
     protected $isJson = false;
 
-    public function __construct(protected App $app)
+    protected $app;
+
+    public function __construct(/*protected*/ App $app)
     {
+        $this->app = $app;
     }
 
     /**
@@ -113,14 +116,14 @@ class Handle
      * @param Output    $output
      * @param Throwable $e
      */
-    public function renderForConsole(Output $output, Throwable $e): void
+    /*public function renderForConsole(Output $output, Throwable $e): void
     {
         if ($this->app->isDebug()) {
             $output->setVerbosity(Output::VERBOSITY_DEBUG);
         }
 
         $output->renderException($e);
-    }
+    }*/
 
     /**
      * @access protected
@@ -152,7 +155,7 @@ class Handle
             $nextException = $exception;
             do {
                 $traces[] = [
-                    'name'    => $nextException::class,
+                    'name'    => get_class($nextException),
                     'file'    => $nextException->getFile(),
                     'line'    => $nextException->getLine(),
                     'code'    => $this->getCode($nextException),

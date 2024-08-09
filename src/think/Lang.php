@@ -271,8 +271,8 @@ class Lang
             } else {
                 // 关联索引解析
                 $replace = array_keys($vars);
-                foreach ($replace as &$v) {
-                    $v = "{:{$v}}";
+                foreach ($replace as $idx => $v) {
+                    $replace[$idx] = "{:{$v}}";
                 }
                 $value = str_replace($replace, $vars, $value);
             }

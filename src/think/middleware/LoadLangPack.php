@@ -27,8 +27,13 @@ class LoadLangPack
 {
     protected $config;
 
-    public function __construct(protected App $app, protected Lang $lang, Config $config)
+    protected $app;
+    protected $lang;
+
+    public function __construct(/*protected*/ App $app, /*protected*/ Lang $lang, Config $config)
     {
+        $this->app    = $app;
+        $this->lang   = $lang;
         $this->config = $lang->getConfig();
     }
 

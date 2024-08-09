@@ -858,11 +858,24 @@ class Request implements ArrayAccess
             $method = $this->method(true);
 
             // 自动获取请求变量
-            $vars   =   match ($method) {
+            switch ($method) {
+                case 'POST':
+                    $vars = $this->post(false);
+                    break;
+                case 'PUT':
+                case 'DELETE':
+                case 'PATCH':
+                    $vars = $this->put(false);
+                    break;
+                default:
+                    $vars = [];
+                    break;
+            }
+            /*$vars   =   match ($method) {
                 'POST'  =>  $this->post(false),
                 'PUT','DELETE','PATCH'  =>  $this->put(false),
                 default =>  [],
-            };
+            };*/
 
             // 当前请求参数和URL地址中的参数合并
             $this->param = array_merge($this->param, $this->get(false), $vars, $this->route(false));
@@ -1318,13 +1331,34 @@ class Request implements ArrayAccess
     {
         $type = strtolower($type);
         if (in_array($type, ['a', 'b', 'd', 'f', 's'])) {
-            $data   =   match ($type) {
+            switch ($type) {
+                case 'a':
+                    $data = (array) $data;  // 数组
+                    break;
+                case 'b':
+                    $data = (bool) $data;   // 布尔
+                    break;
+                case 'd':
+                    $data = (int) $data;    // 数字
+                    break;
+                case 'f':
+                    $data = (float) $data;  // 浮点
+                    break;
+                case 's':
+                    if (is_scalar($data)) {
+                        $data = (string) $data; //字符串
+                    } else {
+                        throw new \InvalidArgumentException('variable type error：' . gettype($data));
+                    }
+                    break;
+            }
+            /*$data   =   match ($type) {
                 'a'     =>  (array) $data,  // 数组
                 'b'     =>  (bool) $data,   // 布尔
                 'd'     =>  (int) $data,    // 数字
                 'f'     =>  (float) $data,  // 浮点
                 's'     =>  is_scalar($data) ? (string) $data : throw new \InvalidArgumentException('variable type error：' . gettype($data)), //字符串
-            };
+            };*/
         }
     }
 
@@ -1659,11 +1693,22 @@ class Request implements ArrayAccess
      */
     public function isValidIP(string $ip, string $type = ''): bool
     {
-        $flag   =   match (strtolower($type)) {
+        switch (strtolower($type)) {
+            case 'ipv4':
+                $flag = FILTER_FLAG_IPV4;
+                break;
+            case 'ipv6':
+                $flag = FILTER_FLAG_IPV6;
+                break;
+            default:
+                $flag = 0;
+                break;
+        }
+        /*$flag   =   match (strtolower($type)) {
             'ipv4'  =>  FILTER_FLAG_IPV4,
             'ipv6'  =>  FILTER_FLAG_IPV6,
             default =>  0,
-        };
+        };*/
 
         return boolval(filter_var($ip, FILTER_VALIDATE_IP, $flag));
     }

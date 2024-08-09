@@ -45,12 +45,15 @@ class Cookie
      */
     protected $cookie = [];
 
+    protected $request;
+
     /**
      * 构造方法
      * @access public
      */
-    public function __construct(protected Request $request, array $config = [])
+    public function __construct(/*protected*/ Request $request, array $config = [])
     {
+        $this->request = $request;
         $this->config  = array_merge($this->config, array_change_key_case($config));
     }
 

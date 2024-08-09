@@ -22,8 +22,11 @@ use think\event\RouteLoaded;
  */
 abstract class Service
 {
-    public function __construct(protected App $app)
+    protected $app;
+
+    public function __construct(/*protected*/ App $app)
     {
+        $this->app = $app;
     }
 
     /**
@@ -52,12 +55,12 @@ abstract class Service
      * @access protected
      * @param array|string $commands 指令
      */
-    protected function commands($commands)
+    /*protected function commands($commands)
     {
         $commands = is_array($commands) ? $commands : func_get_args();
 
         Console::starting(function (Console $console) use ($commands) {
             $console->addCommands($commands);
         });
-    }
+    }*/
 }

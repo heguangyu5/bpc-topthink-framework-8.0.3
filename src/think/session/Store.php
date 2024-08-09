@@ -37,8 +37,14 @@ class Store
     /** @var array */
     protected $serialize = [];
 
-    public function __construct(protected string $name, protected SessionHandlerInterface $handler, array $serialize = null)
+    protected $name;
+    protected $handler;
+
+    public function __construct(/*protected*/ string $name, /*protected*/ SessionHandlerInterface $handler, array $serialize = null)
     {
+        $this->name    = $name;
+        $this->handler = $handler;
+
         if (!empty($serialize)) {
             $this->serialize = $serialize;
         }

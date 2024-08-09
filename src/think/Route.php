@@ -146,8 +146,12 @@ class Route
      */
     protected $removeSlash = false;
 
-    public function __construct(protected App $app)
+    protected $app;
+
+    public function __construct(/*protected*/ App $app)
     {
+        $this->app = $app;
+
         $this->ruleName = new RuleName();
         $this->setDefaultDomain();
 

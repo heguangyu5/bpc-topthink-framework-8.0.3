@@ -29,8 +29,11 @@ abstract class Manager
      */
     protected $namespace = null;
 
-    public function __construct(protected App $app)
+    protected $app;
+
+    public function __construct(/*protected*/ App $app)
     {
+        $this->app = $app;
     }
 
     /**

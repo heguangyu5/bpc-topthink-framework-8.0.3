@@ -81,14 +81,29 @@ class UploadedFile extends File
      */
     protected function getErrorMessage(): string
     {
-        return match ($this->error) {
+        switch ($this->error) {
+            case 1:
+            case 2:
+                return 'upload File size exceeds the maximum value';
+            case 3:
+                return 'only the portion of file is uploaded';
+            case 4:
+                return 'no file to uploaded';
+            case 6:
+                return 'upload temp dir not found';
+            case 7:
+                return 'file write error';
+            default:
+                return 'unknown upload error';
+        }
+        /*return match ($this->error) {
             1,2     => 'upload File size exceeds the maximum value',
             3       => 'only the portion of file is uploaded',
             4       => 'no file to uploaded',
             6       => 'upload temp dir not found',
             7       => 'file write error',
             default => 'unknown upload error',
-        };
+        };*/
     }
 
     /**

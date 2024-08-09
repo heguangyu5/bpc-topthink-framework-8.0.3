@@ -137,7 +137,7 @@ class App extends Container
         'app'                     => App::class,
         'cache'                   => Cache::class,
         'config'                  => Config::class,
-        'console'                 => Console::class,
+        //'console'                 => Console::class,
         'cookie'                  => Cookie::class,
         'db'                      => Db::class,
         'env'                     => Env::class,
@@ -239,10 +239,11 @@ class App extends Container
      */
     public function getService(Service|string $service): ?Service
     {
-        $name = is_string($service) ? $service : $service::class;
-        return array_values(array_filter($this->services, function ($value) use ($name) {
+        $name = is_string($service) ? $service : get_class($service);
+        $values = array_values(array_filter($this->services, function ($value, $k) use ($name) {
             return $value instanceof $name;
-        }, ARRAY_FILTER_USE_BOTH))[0] ?? null;
+        }, ARRAY_FILTER_USE_BOTH));
+        return $values[0] ?? null;
     }
 
     /**
@@ -308,7 +309,8 @@ class App extends Container
      */
     public function version(): string
     {
-        return ltrim(InstalledVersions::getPrettyVersion('topthink/framework'), 'v');
+        //return ltrim(InstalledVersions::getPrettyVersion('topthink/framework'), 'v');
+        return self::VERSION;
     }
 
     /**
@@ -503,7 +505,7 @@ class App extends Container
      */
     public function boot(): void
     {
-        array_walk($this->services, function ($service) {
+        array_walk($this->services, function ($service, $k) {
             $this->bootService($service);
         });
     }
@@ -533,7 +535,7 @@ class App extends Container
             $configs = array(
                 'app',
                 'cache',
-                'console',
+                //'console',
                 'cookie',
                 'database',
                 'filesystem',

@@ -30,8 +30,17 @@ abstract class Dispatch
      */
     protected $app;
 
-    public function __construct(protected Request $request, protected Rule $rule, protected $dispatch, protected array $param = [])
+    protected $request;
+    protected $rule;
+    protected $dispatch;
+    protected $param;
+
+    public function __construct(/*protected*/ Request $request, /*protected*/ Rule $rule, /*protected*/ $dispatch, /*protected*/ array $param = [])
     {
+        $this->request  = $request;
+        $this->rule     = $rule;
+        $this->dispatch = $dispatch;
+        $this->param    = $param;
     }
 
     public function init(App $app)
@@ -154,7 +163,7 @@ abstract class Dispatch
 
             if (!empty($result)) {
                 // 注入容器
-                $this->app->instance($result::class, $result);
+                $this->app->instance(get_class($result), $result);
             }
         }
     }

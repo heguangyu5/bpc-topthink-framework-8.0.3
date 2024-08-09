@@ -285,15 +285,15 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
     public function invokeFunction(string|Closure $function, array $vars = [])
     {
         if (defined('__BPC__')) {
+            $reflect = bpc_is_callable_num_args($function);
+            if (!$reflect) {
+                throw new FuncNotFoundException("function not exists: {$function}()", $function);
+            }
+        } else {
             try {
                 $reflect = new ReflectionFunction($function);
             } catch (ReflectionException $e) {
                 throw new FuncNotFoundException("function not exists: {$function}()", $function, $e);
-            }
-        } else {
-            $reflect = bpc_is_callable_num_args($function);
-            if (!$reflect) {
-                throw new FuncNotFoundException("function not exists: {$function}()", $function);
             }
         }
 
@@ -364,7 +364,12 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
     {
         $args = $this->bindParams($reflect, $vars);
 
-        return $reflect->invokeArgs($instance, $args);
+        if (defined('__BPC__')) {
+            $method = $reflect['method'];
+            return $instance->$method(...$args);
+        } else {
+            return $reflect->invokeArgs($instance, $args);
+        }
     }
 
     /**
@@ -402,14 +407,15 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
             $reflect = bpc_is_callable_num_args(array($class, '__make'));
             if ($reflect) {
                 $args   = $this->bindParams($reflect, $vars);
-                $object = $class::__make($args);
+                $object = $class::__make(...$args);
             } else {
                 $reflect = bpc_is_callable_num_args(array($class, '__construct'));
-                if (!$reflect) {
-                    throw new \Exception("expect $class::__construct callable");
+                if ($reflect && $reflect['max'] != 0) {
+                    $args = $this->bindParams($reflect, $vars);
+                    $object = new $class(...$args);
+                } else {
+                    $object = new $class;
                 }
-                $args = $this->bindParams($reflect, $vars);
-                $object = new $class(...$args);
             }
             $this->invokeAfter($class, $object);
             return $object;
@@ -478,10 +484,13 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
                 return [];
             }
 
-            // 判断数组类型 只接受数字数组
-            reset($vars);
-            if (key($vars) !== 0) {
-                throw new \Exception("expect ordered vars");
+            if ($vars) {
+                // 判断数组类型 只接受数字数组
+                reset($vars);
+                if (key($vars) !== 0) {
+                    $vars = array_values($vars);
+                    //throw new \Exception("expect ordered vars");
+                }
             }
 
             $args = [];

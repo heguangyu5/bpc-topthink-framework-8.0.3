@@ -29,8 +29,11 @@ class Middleware
      */
     protected $queue = [];
 
-    public function __construct(protected App $app)
+    protected $app;
+
+    public function __construct(/*protected*/ App $app)
     {
+        $this->app = $app;
     }
 
     /**

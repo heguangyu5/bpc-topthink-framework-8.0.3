@@ -44,6 +44,11 @@ class Url
      */
     protected $domain = false;
 
+    protected $route;
+    protected $app;
+    protected $url;
+    protected $vars;
+
     /**
      * 架构函数
      * @access public
@@ -52,8 +57,12 @@ class Url
      * @param  string $url URL地址
      * @param  array  $vars 参数
      */
-    public function __construct(protected Route $route, protected App $app, protected string $url = '', protected array $vars = [])
+    public function __construct(/*protected*/ Route $route, /*protected*/ App $app, /*protected*/ string $url = '', /*protected*/ array $vars = [])
     {
+        $this->route = $route;
+        $this->app   = $app;
+        $this->url   = $url;
+        $this->vars  = $vars;
     }
 
     /**

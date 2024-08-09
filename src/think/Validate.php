@@ -848,7 +848,37 @@ class Validate
             return $result;
         };
 
-        return match (Str::camel($rule)) {
+        switch (Str::camel($rule)) {
+            case 'require':
+                return !empty($value) || '0' == $value; // 必须
+            case 'accepted':
+                return in_array($value, ['1', 'on', 'yes']); // 接受
+            case 'date':
+                return false !== strtotime($value); // 是否是一个有效日期
+            case 'activeUrl':
+                return checkdnsrr($value); // 是否为有效的网址
+            case 'boolean':
+            case 'bool':
+                return in_array($value, [true, false, 0, 1, '0', '1'], true);   // 是否为布尔值
+            case 'number':
+                return ctype_digit((string) $value);
+            case 'alphaNum':
+                return ctype_alnum($value);
+            case 'array':
+                return is_array($value); // 是否为数组
+            case 'string':
+                return is_string($value);
+            case 'file':
+                return $value instanceof File;
+            case 'image':
+                return $value instanceof File && in_array($this->getImageType($value->getRealPath()), [1, 2, 3, 6]);
+            case 'token':
+                return $this->token($value, '__token__', $data);
+            default:
+                return $call($value, $rule);
+        }
+
+        /*return match (Str::camel($rule)) {
             'require'   =>  !empty($value) || '0' == $value, // 必须
             'accepted'  =>  in_array($value, ['1', 'on', 'yes']), // 接受
             'date'      =>  false !== strtotime($value),                // 是否是一个有效日期
@@ -862,7 +892,7 @@ class Validate
             'image'     =>  $value instanceof File && in_array($this->getImageType($value->getRealPath()), [1, 2, 3, 6]),
             'token'     =>  $this->token($value, '__token__', $data),
             default     =>  $call($value, $rule),
-        };
+        };*/
     }
 
     // 判断图像类型

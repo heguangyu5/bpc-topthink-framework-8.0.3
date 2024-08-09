@@ -176,7 +176,17 @@ class Event
             $observer = $this->app->make($observer);
         }
 
-        $reflect = new ReflectionClass($observer);
+        if (empty($prefix) && isset($observer->eventPrefix)) {
+            $prefix = $observer->eventPrefix;
+        }
+
+        foreach (get_class_methods($observer) as $method) {
+            if (str_starts_with($method, 'on')) {
+                $this->listen($prefix . substr($method, 2), [$observer, $method]);
+            }
+        }
+
+        /*$reflect = new ReflectionClass($observer);
         $methods = $reflect->getMethods(ReflectionMethod::IS_PUBLIC);
 
         if (empty($prefix) && $reflect->hasProperty('eventPrefix')) {
@@ -190,7 +200,7 @@ class Event
             if (str_starts_with($name, 'on')) {
                 $this->listen($prefix . substr($name, 2), [$observer, $name]);
             }
-        }
+        }*/
 
         return $this;
     }
@@ -207,7 +217,7 @@ class Event
     {
         if (is_object($event)) {
             $params = $event;
-            $event  = $event::class;
+            $event  = get_class($event);
         }
 
         if (isset($this->bind[$event])) {

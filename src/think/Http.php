@@ -48,8 +48,11 @@ class Http
      */
     protected $isBind = false;
 
-    public function __construct(protected App $app)
+    protected $app;
+
+    public function __construct(/*protected*/ App $app)
     {
+        $this->app = $app;
         $this->routePath = $this->app->getRootPath() . 'route' . DIRECTORY_SEPARATOR;
     }
 
@@ -213,8 +216,15 @@ class Http
      */
     protected function loadMiddleware(): void
     {
-        if (is_file($this->app->getBasePath() . 'middleware.php')) {
-            $this->app->middleware->import(include $this->app->getBasePath() . 'middleware.php');
+        if (defined('__BPC__')) {
+            $middlewares = include_silent($this->app->getBasePath() . 'middleware.php');
+            if ($middlewares) {
+                $this->app->middleware->import($middlewares);
+            }
+        } else {
+            if (is_file($this->app->getBasePath() . 'middleware.php')) {
+                $this->app->middleware->import(include $this->app->getBasePath() . 'middleware.php');
+            }
         }
     }
 
@@ -228,10 +238,14 @@ class Http
         // 加载路由定义
         $routePath = $this->getRoutePath();
 
-        if (is_dir($routePath)) {
-            $files = glob($routePath . '*.php');
-            foreach ($files as $file) {
-                include $file;
+        if (defined('__BPC__')) {
+            include_silent($routePath . 'app.php');
+        } else {
+            if (is_dir($routePath)) {
+                $files = glob($routePath . '*.php');
+                foreach ($files as $file) {
+                    include $file;
+                }
             }
         }
 

@@ -24,12 +24,17 @@ class Config
      */
     protected $config = [];
 
+    protected $path;
+    protected $ext;
+
     /**
      * 构造方法
      * @access public
      */
-    public function __construct(protected string $path = '', protected string $ext = '.php')
+    public function __construct(/*protected*/ string $path = '', /*protected*/ string $ext = '.php')
     {
+        $this->path = $path;
+        $this->ext  = $ext;
     }
 
     public static function __make(App $app)
@@ -49,14 +54,26 @@ class Config
      */
     public function load(string $file, string $name = ''): array
     {
-        if (is_file($file)) {
-            $filename = $file;
-        } elseif (is_file($this->path . $file . $this->ext)) {
-            $filename = $this->path . $file . $this->ext;
-        }
+        if (defined('__BPC__')) {
+            $config = include_silent($file);
+            if (!$config) {
+                $config = include_silent($this->path . $file . $this->ext);
+            }
+            if ($config) {
+                return is_array($config) ? $this->set($config, strtolower($name)) : [];
+            }
+        } else {
+            if (is_file($file)) {
+                $filename = $file;
+            } elseif (is_file($this->path . $file . $this->ext)) {
+                $filename = $this->path . $file . $this->ext;
+            }
 
-        if (isset($filename)) {
-            return $this->parse($filename, $name);
+            if (isset($filename)) {
+                $config = include $filename;
+                return is_array($config) ? $this->set($config, strtolower($name)) : [];
+                //return $this->parse($filename, $name);
+            }
         }
 
         return $this->config;
@@ -69,7 +86,7 @@ class Config
      * @param  string $name 一级配置名
      * @return array
      */
-    protected function parse(string $file, string $name): array
+    /*protected function parse(string $file, string $name): array
     {
         $type   = pathinfo($file, PATHINFO_EXTENSION);
         $config = [];
@@ -82,7 +99,7 @@ class Config
         };
 
         return is_array($config) ? $this->set($config, strtolower($name)) : [];
-    }
+    }*/
 
     /**
      * 检测配置是否存在
