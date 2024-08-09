@@ -165,12 +165,12 @@ class App extends Container
      * @access public
      * @param string $rootPath 应用根目录
      */
-    public function __construct(string $rootPath = '')
+    public function __construct(string $rootPath, string $runtimePath)
     {
-        $this->thinkPath   = realpath(dirname(__DIR__)) . DIRECTORY_SEPARATOR;
-        $this->rootPath    = $rootPath ? rtrim($rootPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR : $this->getDefaultRootPath();
+        $this->thinkPath   = dirname(__DIR__) . DIRECTORY_SEPARATOR;
+        $this->rootPath    = rtrim($rootPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->appPath     = $this->rootPath . 'app' . DIRECTORY_SEPARATOR;
-        $this->runtimePath = $this->rootPath . 'runtime' . DIRECTORY_SEPARATOR;
+        $this->runtimePath = rtrim($runtimePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
         if (is_file($this->appPath . 'provider.php')) {
             $this->bind(include $this->appPath . 'provider.php');
@@ -613,8 +613,8 @@ class App extends Container
      * @access protected
      * @return string
      */
-    protected function getDefaultRootPath(): string
+    /*protected function getDefaultRootPath(): string
     {
         return dirname($this->thinkPath, 4) . DIRECTORY_SEPARATOR;
-    }
+    }*/
 }

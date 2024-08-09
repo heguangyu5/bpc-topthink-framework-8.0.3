@@ -284,10 +284,17 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      */
     public function invokeFunction(string|Closure $function, array $vars = [])
     {
-        try {
-            $reflect = new ReflectionFunction($function);
-        } catch (ReflectionException $e) {
-            throw new FuncNotFoundException("function not exists: {$function}()", $function, $e);
+        if (defined('__BPC__')) {
+            try {
+                $reflect = new ReflectionFunction($function);
+            } catch (ReflectionException $e) {
+                throw new FuncNotFoundException("function not exists: {$function}()", $function, $e);
+            }
+        } else {
+            $reflect = bpc_is_callable_num_args($function);
+            if (!$reflect) {
+                throw new FuncNotFoundException("function not exists: {$function}()", $function);
+            }
         }
 
         $args = $this->bindParams($reflect, $vars);
@@ -314,20 +321,35 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
             [$class, $method] = explode('::', $method);
         }
 
-        try {
-            $reflect = new ReflectionMethod($class, $method);
-        } catch (ReflectionException $e) {
-            $class = is_object($class) ? $class::class : $class;
-            throw new FuncNotFoundException('method not exists: ' . $class . '::' . $method . '()', "{$class}::{$method}", $e);
+        if (defined('__BPC__')) {
+            $reflect = bpc_is_callable_num_args(array($class, $method));
+            if (!$reflect) {
+                $class = is_object($class) ? get_class($class) : $class;
+                throw new FuncNotFoundException('method not exists: ' . $class . '::' . $method . '()', "{$class}::{$method}");
+            }
+
+            $args = $this->bindParams($reflect, $vars);
+
+            if (is_object($class)) {
+                return $class->$method(...$args);
+            }
+            return $class::$method(...$args);
+        } else {
+            try {
+                $reflect = new ReflectionMethod($class, $method);
+            } catch (ReflectionException $e) {
+                $class = is_object($class) ? $class::class : $class;
+                throw new FuncNotFoundException('method not exists: ' . $class . '::' . $method . '()', "{$class}::{$method}", $e);
+            }
+
+            $args = $this->bindParams($reflect, $vars);
+
+            if ($accessible) {
+                $reflect->setAccessible($accessible);
+            }
+
+            return $reflect->invokeArgs(is_object($class) ? $class : null, $args);
         }
-
-        $args = $this->bindParams($reflect, $vars);
-
-        if ($accessible) {
-            $reflect->setAccessible($accessible);
-        }
-
-        return $reflect->invokeArgs(is_object($class) ? $class : null, $args);
     }
 
     /**
@@ -373,31 +395,51 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      */
     public function invokeClass(string $class, array $vars = [])
     {
-        try {
-            $reflect = new ReflectionClass($class);
-        } catch (ReflectionException $e) {
-            throw new ClassNotFoundException('class not exists: ' . $class, $class, $e);
-        }
-
-        if ($reflect->hasMethod('__make')) {
-            $method = $reflect->getMethod('__make');
-            if ($method->isPublic() && $method->isStatic()) {
-                $args   = $this->bindParams($method, $vars);
-                $object = $method->invokeArgs(null, $args);
-                $this->invokeAfter($class, $object);
-                return $object;
+        if (defined('__BPC__')) {
+            if (!class_exists($class)) {
+                throw new ClassNotFoundException('class not exists: ' . $class, $class);
             }
+            $reflect = bpc_is_callable_num_args(array($class, '__make'));
+            if ($reflect) {
+                $args   = $this->bindParams($reflect, $vars);
+                $object = $class::__make($args);
+            } else {
+                $reflect = bpc_is_callable_num_args(array($class, '__construct'));
+                if (!$reflect) {
+                    throw new \Exception("expect $class::__construct callable");
+                }
+                $args = $this->bindParams($reflect, $vars);
+                $object = new $class(...$args);
+            }
+            $this->invokeAfter($class, $object);
+            return $object;
+        } else {
+            try {
+                $reflect = new ReflectionClass($class);
+            } catch (ReflectionException $e) {
+                throw new ClassNotFoundException('class not exists: ' . $class, $class, $e);
+            }
+
+            if ($reflect->hasMethod('__make')) {
+                $method = $reflect->getMethod('__make');
+                if ($method->isPublic() && $method->isStatic()) {
+                    $args   = $this->bindParams($method, $vars);
+                    $object = $method->invokeArgs(null, $args);
+                    $this->invokeAfter($class, $object);
+                    return $object;
+                }
+            }
+
+            $constructor = $reflect->getConstructor();
+
+            $args = $constructor ? $this->bindParams($constructor, $vars) : [];
+
+            $object = $reflect->newInstanceArgs($args);
+
+            $this->invokeAfter($class, $object);
+
+            return $object;
         }
-
-        $constructor = $reflect->getConstructor();
-
-        $args = $constructor ? $this->bindParams($constructor, $vars) : [];
-
-        $object = $reflect->newInstanceArgs($args);
-
-        $this->invokeAfter($class, $object);
-
-        return $object;
     }
 
     /**
@@ -429,41 +471,74 @@ class Container implements ContainerInterface, ArrayAccess, IteratorAggregate, C
      * @param array                      $vars    参数
      * @return array
      */
-    protected function bindParams(ReflectionFunctionAbstract $reflect, array $vars = []): array
+    protected function bindParams(/*ReflectionFunctionAbstract*/ $reflect, array $vars = []): array
     {
-        if ($reflect->getNumberOfParameters() == 0) {
-            return [];
-        }
-
-        // 判断数组类型 数字数组时按顺序绑定参数
-        reset($vars);
-        $type   = key($vars) === 0 ? 1 : 0;
-        $params = $reflect->getParameters();
-        $args   = [];
-
-        foreach ($params as $param) {
-            $name           = $param->getName();
-            $lowerName      = Str::snake($name);
-            $reflectionType = $param->getType();
-
-            if ($param->isVariadic()) {
-                return array_merge($args, array_values($vars));
-            } elseif ($reflectionType && $reflectionType instanceof ReflectionNamedType && $reflectionType->isBuiltin() === false) {
-                $args[] = $this->getObjectParam($reflectionType->getName(), $vars);
-            } elseif (1 == $type && !empty($vars)) {
-                $args[] = array_shift($vars);
-            } elseif (0 == $type && array_key_exists($name, $vars)) {
-                $args[] = $vars[$name];
-            } elseif (0 == $type && array_key_exists($lowerName, $vars)) {
-                $args[] = $vars[$lowerName];
-            } elseif ($param->isDefaultValueAvailable()) {
-                $args[] = $param->getDefaultValue();
-            } else {
-                throw new InvalidArgumentException('method param miss:' . $name);
+        if (defined('__BPC__')) {
+            if ($reflect['max'] == 0) {
+                return [];
             }
-        }
 
-        return $args;
+            // 判断数组类型 只接受数字数组
+            reset($vars);
+            if (key($vars) !== 0) {
+                throw new \Exception("expect ordered vars");
+            }
+
+            $args = [];
+
+            foreach ($reflect['typehints'] as $idx => $reflectionType) {
+                if (   $reflectionType
+                    && !in_array($reflectionType, ['bool', 'int', 'float', 'string', 'array', 'callable', 'object'])
+                ) {
+                    $args[] = $this->getObjectParam($reflectionType, $vars);
+                } elseif (!empty($vars)) {
+                    $args[] = array_shift($vars);
+                } else {
+                    throw new InvalidArgumentException('method param ' . ($idx + 1) . ' miss');
+                }
+            }
+
+            if (!empty($vars) && $reflect['max'] == -1) {
+                // Variadic
+                $args = array_merge($args, $vars);
+            }
+
+            return $args;
+        } else {
+            if ($reflect->getNumberOfParameters() == 0) {
+                return [];
+            }
+
+            // 判断数组类型 数字数组时按顺序绑定参数
+            reset($vars);
+            $type   = key($vars) === 0 ? 1 : 0;
+            $params = $reflect->getParameters();
+            $args   = [];
+
+            foreach ($params as $param) {
+                $name           = $param->getName();
+                $lowerName      = Str::snake($name);
+                $reflectionType = $param->getType();
+
+                if ($param->isVariadic()) {
+                    return array_merge($args, array_values($vars));
+                } elseif ($reflectionType && $reflectionType instanceof ReflectionNamedType && $reflectionType->isBuiltin() === false) {
+                    $args[] = $this->getObjectParam($reflectionType->getName(), $vars);
+                } elseif (1 == $type && !empty($vars)) {
+                    $args[] = array_shift($vars);
+                } elseif (0 == $type && array_key_exists($name, $vars)) {
+                    $args[] = $vars[$name];
+                } elseif (0 == $type && array_key_exists($lowerName, $vars)) {
+                    $args[] = $vars[$lowerName];
+                } elseif ($param->isDefaultValueAvailable()) {
+                    $args[] = $param->getDefaultValue();
+                } else {
+                    throw new InvalidArgumentException('method param miss:' . $name);
+                }
+            }
+
+            return $args;
+        }
     }
 
     /**
