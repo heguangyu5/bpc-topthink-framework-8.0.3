@@ -137,8 +137,9 @@ class Lang
         ]);
 
         // 加载系统语言包
-        $files = glob($this->app->getAppPath() . 'lang' . DIRECTORY_SEPARATOR . $langset . '.*');
-        $this->load($files);
+        // TODO
+        //$files = glob($this->app->getAppPath() . 'lang' . DIRECTORY_SEPARATOR . $langset . '.*');
+        //$this->load($files);
 
         // 加载扩展（自定义）语言包
         $list = $this->app->config->get('lang.extend_list', []);
@@ -165,9 +166,20 @@ class Lang
         $lang = [];
 
         foreach ((array) $file as $name) {
-            if (is_file($name)) {
-                $result = $this->parse($name);
-                $lang   = array_change_key_case($result) + $lang;
+            if (defined('__BPC__')) {
+                $result = include_silent($name);
+                if (!is_array($result)) {
+                    $result = [];
+                }
+                $lang = array_change_key_case($result) + $lang;
+            } else {
+                if (is_file($name)) {
+                    $result = include $name; //$this->parse($name);
+                    if (!is_array($result)) {
+                        $result = [];
+                    }
+                    $lang = array_change_key_case($result) + $lang;
+                }
             }
         }
 
@@ -184,7 +196,7 @@ class Lang
      * @param string $file 语言文件名
      * @return array
      */
-    protected function parse(string $file): array
+    /*protected function parse(string $file): array
     {
         $type   = pathinfo($file, PATHINFO_EXTENSION);
         $result = match ($type) {
@@ -195,7 +207,7 @@ class Lang
         };
 
         return is_array($result) ? $result : [];
-    }
+    }*/
 
     /**
      * 判断是否存在语言定义(不区分大小写)
