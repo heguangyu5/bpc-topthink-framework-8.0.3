@@ -172,8 +172,15 @@ class App extends Container
         $this->appPath     = $this->rootPath . 'app' . DIRECTORY_SEPARATOR;
         $this->runtimePath = rtrim($runtimePath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
-        if (is_file($this->appPath . 'provider.php')) {
-            $this->bind(include $this->appPath . 'provider.php');
+        if (defined('__BPC__')) {
+            $provider = include_silent($this->appPath . 'provider.php');
+            if ($provider) {
+                $this->bind($provider);
+            }
+        } else {
+            if (is_file($this->appPath . 'provider.php')) {
+                $this->bind(include $this->appPath . 'provider.php');
+            }
         }
 
         static::setInstance($this);
@@ -421,7 +428,11 @@ class App extends Container
     public function loadEnv(string $envName = ''): void
     {
         // 加载环境变量
-        $envFile = $envName ? $this->rootPath . '.env.' . $envName : $this->rootPath . '.env';
+        if (defined('__BPC__')) {
+            $envFile = $envName ? $this->runtimePath . '../.env.' . $envName : $this->runtimePath . '../.env';
+        } else {
+            $envFile = $envName ? $this->rootPath . '.env.' . $envName : $this->rootPath . '.env';
+        }
 
         if (is_file($envFile)) {
             $this->env->load($envFile);
@@ -506,32 +517,72 @@ class App extends Container
     {
         $appPath = $this->getAppPath();
 
-        if (is_file($appPath . 'common.php')) {
-            include_once $appPath . 'common.php';
+        if (defined('__BPC__')) {
+            include_once_silent($appPath . 'common.php');
+        } else {
+            if (is_file($appPath . 'common.php')) {
+                include_once $appPath . 'common.php';
+            }
         }
 
         include_once $this->thinkPath . 'helper.php';
 
         $configPath = $this->getConfigPath();
 
-        $files = [];
+        if (defined('__BPC__')) {
+            $configs = array(
+                'app',
+                'cache',
+                'console',
+                'cookie',
+                'database',
+                'filesystem',
+                'lang',
+                'log',
+                'middleware',
+                'route',
+                'session',
+                'trace',
+                'view'
+            );
+            foreach ($configs as $config) {
+                $file = $configPath . $config . $this->configExt;
+                if (include_file_exists($file)) {
+                    $this->config->load($file, $config);
+                }
+            }
 
-        if (is_dir($configPath)) {
-            $files = glob($configPath . '*' . $this->configExt);
-        }
+            $event = include_silent($appPath . 'event.php');
+            if ($event) {
+                $this->loadEvent($event);
+            }
 
-        foreach ($files as $file) {
-            $this->config->load($file, pathinfo($file, PATHINFO_FILENAME));
-        }
+            $services = include_silent($appPath . 'service.php');
+            if ($services) {
+                foreach ($services as $service) {
+                    $this->register($service);
+                }
+            }
+        } else {
+            $files = [];
 
-        if (is_file($appPath . 'event.php')) {
-            $this->loadEvent(include $appPath . 'event.php');
-        }
+            if (is_dir($configPath)) {
+                $files = glob($configPath . '*' . $this->configExt);
+            }
 
-        if (is_file($appPath . 'service.php')) {
-            $services = include $appPath . 'service.php';
-            foreach ($services as $service) {
-                $this->register($service);
+            foreach ($files as $file) {
+                $this->config->load($file, pathinfo($file, PATHINFO_FILENAME));
+            }
+
+            if (is_file($appPath . 'event.php')) {
+                $this->loadEvent(include $appPath . 'event.php');
+            }
+
+            if (is_file($appPath . 'service.php')) {
+                $services = include $appPath . 'service.php';
+                foreach ($services as $service) {
+                    $this->register($service);
+                }
             }
         }
     }
